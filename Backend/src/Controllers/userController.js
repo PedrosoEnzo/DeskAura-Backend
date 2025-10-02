@@ -1,10 +1,11 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import User from "../Models/User.js";
 
 const prisma = new PrismaClient();
 
 // Buscar todos os usuários
-export const findAll = async (req, res) => {
+export const cadastrarUsuario = async (req, res) => {
   try {
     const users = await prisma.Usuario.findMany({
       select: {
@@ -74,45 +75,3 @@ export const create = async (req, res) => {
   }
 };
 
-// Atualizar um usuário pelo ID
-export const update = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { nome, email, senha, ultimo_login } = req.body;
-
-    let dataToUpdate = { nome, email, ultimo_login };
-    
-    if (senha) {
-      dataToUpdate.senha_hash = await bcrypt.hash(senha, 10);
-    }
-
-    const user = await prisma.Usuario.update({
-      where: { id_usuario: parseInt(id) },
-      data: dataToUpdate,
-      select: {
-        id_usuario: true,
-        nome: true,
-        email: true,
-        ultimo_login: true
-      }
-    });
-
-    res.json(user);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: error.message });
-  }
-};
-
-// Excluir um usuário pelo ID
-export const remove = async (req, res) => {
-  try {
-    const { id } = req.params;
-    await prisma.Usuario.delete({
-      where: { id_usuario: parseInt(id) }
-    });
-    res.status(204).end();
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};

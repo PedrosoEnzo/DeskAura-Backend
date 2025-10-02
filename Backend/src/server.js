@@ -7,7 +7,7 @@ app.use(cors());
 app.use(express.json());
 
 // Prefixo para as rotas de usuário
-app.use('/usuarios', userRoutes);
+app.use('/api', userRoutes);
 
 // Rota health check
 app.get('/health', (req, res) => {
