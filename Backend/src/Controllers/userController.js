@@ -1,6 +1,7 @@
 // src/Controllers/userController.js
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import e from 'express';
 
 const prisma = new PrismaClient();
 
@@ -21,6 +22,27 @@ export const cadastrarUsuario = async (req, res) => {
     });
 
     res.status(201).json(user);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const login = async (req, res) => {
+  try {
+    const { email, senha } = req.body;
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      return res.status(401).json({ error: 'Email ou senha inválidos' });
+    }
+
+    const senhaValida = await bcrypt.compare(senha, user.senha);
+    if (!senhaValida) {
+      return res.status(401).json({ error: 'Email ou senha inválidos' });
+    }
+
+    res.json({ message: 'Login bem-sucedido', user });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: error.message });
