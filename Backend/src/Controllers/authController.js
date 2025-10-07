@@ -46,48 +46,31 @@ export const login = async (req, res) => {
   try {
     const { email, senha } = req.body;
 
+    console.log("Login attempt:", email); // log de tentativa
+
     const user = await prisma.Usuario.findUnique({ where: { email } });
     if (!user) {
+      console.log("Usuário não encontrado");
       return res.status(400).json({ error: "Credenciais inválidas" });
     }
 
     const validPassword = await bcrypt.compare(senha, user.senha_hash);
     if (!validPassword) {
+      console.log("Senha inválida para:", email);
       return res.status(400).json({ error: "Credenciais inválidas" });
     }
 
-    // Atualiza último login
     await prisma.Usuario.update({
       where: { id_usuario: user.id_usuario },
       data: { ultimo_login: new Date() }
     });
 
     const token = generateToken(user.id_usuario);
-
-    // Remove senha_hash da resposta
     const { senha_hash, ...userWithoutPassword } = user;
     
     res.json({ user: userWithoutPassword, token });
   } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
-
-// Retorna usuário logado
-export const me = async (req, res) => {
-  try {
-    const user = await prisma.Usuario.findUnique({
-      where: { id_usuario: req.userId },
-      select: {
-        id_usuario: true,
-        nome: true,
-        email: true,
-        ultimo_login: true
-      }
-    });
-    if (!user) return res.status(404).json({ error: "Usuário não encontrado" });
-    res.json(user);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error("Erro no loginController:", error); // log detalhado
+    res.status(500).json({ error: "Erro interno do servidor", details: error.message });
   }
 };
