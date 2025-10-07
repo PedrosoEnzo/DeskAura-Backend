@@ -4,9 +4,10 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "postinstall": "prisma generate --schema=src/prisma/schema.prisma && prisma migrate deploy --schema=src/prisma/schema.prisma",
-    "start": "node src/server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+"prisma:generate": "prisma generate --schema=src/prisma/schema.prisma",
+"prisma:migrate:deploy": "prisma migrate deploy --schema=src/prisma/schema.prisma",
+"start": "node src/server.js",
+"test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
     "@prisma/client": "^6.16.3",
