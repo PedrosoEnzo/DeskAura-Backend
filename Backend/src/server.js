@@ -1,19 +1,20 @@
 import express from 'express';
 import cors from 'cors';
-import 'dotenv/config'; 
+import 'dotenv/config';
 import userRoutes from './Routes/router.js';
 
 const app = express();
 
-// Configurar CORS
+// Configuração CORS
 app.use(cors({
-  origin: 'http://localhost:5173', // URL do seu front-end
-  credentials: true,               // se precisar enviar cookies
+  origin: '*', // permite qualquer origem para teste
+  credentials: true,
 }));
 
 app.use(express.json());
 app.use('/api', userRoutes);
 
+// Rota de teste
 app.get('/api/', (req, res) => {
   res.json({ status: 'OK', message: 'Servidor rodando' });
 });

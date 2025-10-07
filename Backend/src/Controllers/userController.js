@@ -1,9 +1,16 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 
 const prisma = new PrismaClient();
+const JWT_SECRET = process.env.JWT_SECRET || "marcos_aurelo_secret";
 
-// Cadastro de usuário (alternativo)
+// Função para gerar token JWT
+const generateToken = (userId) => {
+  return jwt.sign({ id: userId }, JWT_SECRET, { expiresIn: "1d" });
+};
+
+// Cadastro de usuário
 export const cadastrarUsuario = async (req, res) => {
   try {
     const { nome, email, senha } = req.body;
@@ -16,18 +23,20 @@ export const cadastrarUsuario = async (req, res) => {
     const senha_hash = await bcrypt.hash(senha, 10);
 
     const user = await prisma.User.create({
-      data: { nome, email, senha: senha_hash },
-      select: { id: true, nome: true, email: true },
+      data: { nome, email, senha_hash },
+      select: { id_usuario: true, nome: true, email: true },
     });
 
-    res.status(201).json(user);
+    const token = generateToken(user.id_usuario);
+
+    res.status(201).json({ user, token });
   } catch (error) {
     console.error("Erro no cadastrarUsuario:", error);
     res.status(500).json({ error: "Erro interno do servidor", details: error.message });
   }
 };
 
-// Login de usuário (alternativo)
+// Login de usuário
 export const login = async (req, res) => {
   try {
     const { email, senha } = req.body;
@@ -37,35 +46,24 @@ export const login = async (req, res) => {
       return res.status(401).json({ error: "Email ou senha inválidos" });
     }
 
-    const senhaValida = await bcrypt.compare(senha, user.senha);
-    if (!senhaValida) {
+    const validPassword = await bcrypt.compare(senha, user.senha_hash);
+    if (!validPassword) {
       return res.status(401).json({ error: "Email ou senha inválidos" });
     }
 
-    res.json({ message: "Login bem-sucedido", user });
-  } catch (error) {
-    console.error("Erro no loginController:", error);
-    res.status(500).json({ error: "Erro interno do servidor", details: error.message });
-  }
-};
-
-// Buscar usuário por ID
-export const findOne = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const user = await prisma.User.findUnique({
-      where: { id: parseInt(id) },
-      select: { id: true, nome: true, email: true },
+    // Atualiza último login
+    await prisma.User.update({
+      where: { id_usuario: user.id_usuario },
+      data: { ultimo_login: new Date() },
     });
 
-    if (!user) {
-      return res.status(404).json({ error: "Usuário não encontrado" });
-    }
+    const token = generateToken(user.id_usuario);
 
-    res.json(user);
+    const { senha_hash, ...userWithoutPassword } = user;
+
+    res.json({ user: userWithoutPassword, token });
   } catch (error) {
-    console.error("Erro no findOne:", error);
+    console.error("Erro no login:", error);
     res.status(500).json({ error: "Erro interno do servidor", details: error.message });
   }
 };
