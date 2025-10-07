@@ -1,27 +1,16 @@
-import express from 'express';
-import cors from 'cors';
-import 'dotenv/config';
-import userRoutes from './Routes/router.js';
+import express from "express";
+import cors from "cors";
+import userRoutes from "./src/Routes/userRoutes.js"; // caminho para as rotas
 
 const app = express();
-
-// Configuração CORS
-app.use(cors({
-  origin: '*', // permite qualquer origem para teste
-  credentials: true,
-}));
-
-app.use(express.json());
-app.use('/api', userRoutes);
-
-// Rota de teste
-app.get('/api/', (req, res) => {
-  res.json({ status: 'OK', message: 'Servidor rodando' });
-});
-
 const PORT = process.env.PORT || 3000;
+
+app.use(cors());
+app.use(express.json());
+
+// Rotas
+app.use("/api", userRoutes);
+
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 });
-
-export default app;
