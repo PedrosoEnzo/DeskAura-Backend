@@ -4,11 +4,10 @@
   "main": "index.js",
   "type": "module",
  "scripts": {
-    "postinstall": "prisma generate",
-  "start": "node src/server.js",
-  "test": "echo \"Error: no test specified\" && exit 1"
-}
-,
+     "postinstall": "prisma generate --schema=src/prisma/schema.prisma",
+    "start": "node src/server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
   "dependencies": {
     "@prisma/client": "^6.16.3",
     "bcrypt": "^6.0.0",
