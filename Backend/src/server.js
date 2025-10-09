@@ -5,6 +5,34 @@ import router from "./Routes/router.js";
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Rota para ver usuários - 
+app.get('/admin/usuarios', async (req, res) => {
+  try {
+    const { PrismaClient } = await import('@prisma/client');
+    const prisma = new PrismaClient();
+    
+    const usuarios = await prisma.user.findMany({
+      select: {
+        id_usuario: true,
+        nome: true,
+        email: true,
+        ultimo_login: true
+      },
+      orderBy: { id_usuario: 'desc' }
+    });
+    
+    res.json({
+      total: usuarios.length,
+      usuarios: usuarios.map(u => ({
+        ...u,
+        ultimo_login: u.ultimo_login ? new Date(u.ultimo_login).toLocaleString('pt-BR') : 'Nunca'
+      }))
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Configuração do CORS - Permitindo todas as origens (para desenvolvimento)
 app.use(cors({
     origin: "*", // Em produção, substitua por URLs específicas
