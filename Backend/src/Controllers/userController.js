@@ -5,43 +5,39 @@ import jwt from "jsonwebtoken";
 const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || "marcos_aurelo_secret";
 
-// Função para gerar token JWT
 const generateToken = (userId) => {
   return jwt.sign({ id: userId }, JWT_SECRET, { expiresIn: "1d" });
 };
 
-// Cadastro de usuário
+// Cadastro
 export const cadastrarUsuario = async (req, res) => {
   try {
     const { nome, email, senha } = req.body;
 
-    const usuarioExistente = await prisma.User.findUnique({ where: { email } });
-    if (usuarioExistente) {
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) {
       return res.status(400).json({ error: "Email já cadastrado" });
     }
 
-    const senha_hash = await bcrypt.hash(senha, 10);
+    const hashedPassword = await bcrypt.hash(senha, 10);
 
-    const user = await prisma.User.create({
-      data: { nome, email, senha_hash },
-      select: { id_usuario: true, nome: true, email: true },
+    const user = await prisma.user.create({
+      data: { nome, email, senha_hash: hashedPassword },
     });
 
-    const token = generateToken(user.id_usuario);
-
-    res.status(201).json({ user, token });
+    res.status(201).json({ message: "Usuário cadastrado com sucesso", user });
   } catch (error) {
-    console.error("Erro no cadastrarUsuario:", error);
-    res.status(500).json({ error: "Erro interno do servidor", details: error.message });
+    console.error("Erro ao cadastrar:", error);
+    res.status(500).json({ error: "Erro ao cadastrar usuário" });
   }
 };
 
-// Login de usuário
-export const login = async (req, res) => {
+// Login
+export const loginUsuario = async (req, res) => {
   try {
     const { email, senha } = req.body;
 
-    const user = await prisma.User.findUnique({ where: { email } });
+    const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
       return res.status(401).json({ error: "Email ou senha inválidos" });
     }
@@ -51,19 +47,17 @@ export const login = async (req, res) => {
       return res.status(401).json({ error: "Email ou senha inválidos" });
     }
 
-    // Atualiza último login
-    await prisma.User.update({
+    await prisma.user.update({
       where: { id_usuario: user.id_usuario },
       data: { ultimo_login: new Date() },
     });
 
     const token = generateToken(user.id_usuario);
+    const { senha_hash, ...userSemSenha } = user;
 
-    const { senha_hash, ...userWithoutPassword } = user;
-
-    res.json({ user: userWithoutPassword, token });
+    res.json({ user: userSemSenha, token });
   } catch (error) {
     console.error("Erro no login:", error);
-    res.status(500).json({ error: "Erro interno do servidor", details: error.message });
+    res.status(500).json({ error: "Erro interno do servidor" });
   }
 };
