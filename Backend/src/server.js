@@ -15,6 +15,20 @@ app.disable("x-powered-by");
 //helmet serve para adicionar headers de segurança
 app.use(helmet());
 
+//Certifica que o HTTPS está sendo usado
+app.use(
+  helmet.hsts({
+    maxAge: 31536000, // 1 ano em segundos
+    includeSubDomains: true,
+    preload: true,
+  })
+)
+
+
+
+
+
+
 // Rota para ver usuários - 
 app.get('/admin/usuarios', async (req, res) => {
   try {
