@@ -1,9 +1,19 @@
 import express from "express";
 import cors from "cors";
+import helmet from "helmet"
+import rateLimit from "express-rate-limit";
 import router from "./Routes/router.js";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+//Segurança com kali
+
+//removendo header que vaza express no kali
+app.disable("x-powered-by");
+
+//helmet serve para adicionar headers de segurança
+app.use(helmet());
 
 // Rota para ver usuários - 
 app.get('/admin/usuarios', async (req, res) => {
