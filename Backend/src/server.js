@@ -11,7 +11,20 @@ const allowedOrigins = ["http://localhost:5173"];
 app.use(express.json());
 app.use(router);
 
-//Segurança === com === kali ==================================
+//Segurança === com === kali ==========================================================
+
+// Define uma política de segurança de conteúdo - obs: ajuda em ataques de XSS
+app.use(
+  helmet.contentSecurityPolicy({
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: [],
+    },
+  })
+);
+
 
 //removendo header que vaza express no kali
 app.disable("x-powered-by");
