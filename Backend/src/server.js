@@ -1,6 +1,6 @@
 import express from "express";
 import cors from "cors";
-import userRoutes from "./routes/router.js"; // caminho para as rotas
+import userRoutes from "./Routes/router.js"; // caminho para as rotas
 
 const app = express();
 const PORT = process.env.PORT || 3000;
