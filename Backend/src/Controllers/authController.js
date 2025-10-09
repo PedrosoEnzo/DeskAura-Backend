@@ -16,7 +16,7 @@ export const register = async (req, res) => {
     const { nome, email, senha } = req.body;
 
     // Verifica se o email já existe
-    const existingUser = await prisma.User.findUnique({ where: { email } });
+    const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
       return res.status(400).json({ error: "Email já cadastrado" });
     }
@@ -25,12 +25,20 @@ export const register = async (req, res) => {
     const senha_hash = await bcrypt.hash(senha, 10);
 
     // Cria o usuário
-    const user = await prisma.User.create({
-      data: { nome, email, senha: senha_hash },
-      select: { id: true, nome: true, email: true },
+    const user = await prisma.user.create({
+      data: { 
+        nome, 
+        email, 
+        senha_hash, // Corrigido: use senha_hash em vez de senha
+      },
+      select: { 
+        id_usuario: true, // Corrigido: use id_usuario em vez de id
+        nome: true, 
+        email: true 
+      },
     });
 
-    const token = generateToken(user.id);
+    const token = generateToken(user.id_usuario); // Corrigido: use id_usuario
 
     res.status(201).json({ user, token });
   } catch (error) {
@@ -39,24 +47,32 @@ export const register = async (req, res) => {
   }
 };
 
+
 // Login de usuário
 export const login = async (req, res) => {
   try {
     const { email, senha } = req.body;
 
-    const user = await prisma.User.findUnique({ where: { email } });
+    const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
       return res.status(401).json({ error: "Email ou senha inválidos" });
     }
 
-    const validPassword = await bcrypt.compare(senha, user.senha);
+    const validPassword = await bcrypt.compare(senha, user.senha_hash);
     if (!validPassword) {
       return res.status(401).json({ error: "Email ou senha inválidos" });
     }
 
-    const token = generateToken(user.id);
+    // Atualizar último login
+    await prisma.user.update({
+      where: { id_usuario: user.id_usuario },
+      data: { ultimo_login: new Date() },
+    });
 
-    const { senha: senhaHash, ...userWithoutPassword } = user;
+    const token = generateToken(user.id_usuario);
+
+    // Remover senha_hash da resposta
+    const { senha_hash, ...userWithoutPassword } = user;
 
     res.json({ user: userWithoutPassword, token });
   } catch (error) {
