@@ -6,8 +6,12 @@ import router from "./Routes/router.js";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const allowedOrigins = ["http://localhost:5173"];
 
-//Segurança com kali
+app.use(express.json());
+app.use(router);
+
+//Segurança === com === kali ==================================
 
 //removendo header que vaza express no kali
 app.disable("x-powered-by");
@@ -24,7 +28,32 @@ app.use(
   })
 )
 
+// Aquei ele limita o número de requiseções que um Ip pode fazer
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 100, // Limite de 100 requisições por IP
+  message: "Muitas requisições, tente novamente mais tarde."
+});
+app.use("/login", loginLimiter);
 
+// Configuração do CORS - Permitindo todas as origens (para desenvolvimento)
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true); // mobile apps / non-browser
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(new Error("NÃO AUTORIZADO POR CORS"));
+    },
+    credentials: true,
+  })
+);
+
+
+// Middleware para logging
+app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+    next();
+});
 
 
 
@@ -57,22 +86,6 @@ app.get('/admin/usuarios', async (req, res) => {
   }
 });
 
-// Configuração do CORS - Permitindo todas as origens (para desenvolvimento)
-app.use(cors({
-    origin: "*", // Em produção, substitua por URLs específicas
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "Accept"]
-}));
-
-// Middleware para logging
-app.use((req, res, next) => {
-    console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
-    next();
-});
-
-app.use(express.json());
-app.use(router);
-
 // Rota de health check
 app.get("/health", (req, res) => {
     res.json({ status: "OK", message: "Backend funcionando" });
@@ -86,3 +99,4 @@ app.get("/", (req, res) => {
 app.listen(PORT, () => {
     console.log(`🚀 Servidor rodando na porta ${PORT}`);
 });
+
