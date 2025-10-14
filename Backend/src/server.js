@@ -27,7 +27,7 @@ app.use(
 
 // =========================================================
 // 3️⃣ Segurança
-app.enable("trust proxy");
+
 app.disable("x-powered-by");
 app.use(helmet());
 app.use(
@@ -48,14 +48,18 @@ app.use(
   })
 );
 
+
 // =========================================================
 // 4️⃣ Rate limiter
+app.set("trust proxy", 1); // 🔒 Necessário para proxies (Render, Heroku etc.)
+
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
   message: "Muitas requisições, tente novamente mais tarde.",
 });
 app.use("/login", loginLimiter);
+
 
 // =========================================================
 // 5️⃣ Logging
