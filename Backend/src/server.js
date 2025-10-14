@@ -13,7 +13,7 @@ const allowedOrigins = ["http://localhost:5173"];
 app.use(express.json());
 
 // =========================================================
-// 2️⃣ CORS (antes das rotas!)
+// 2️⃣ CORS 
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -27,6 +27,7 @@ app.use(
 
 // =========================================================
 // 3️⃣ Segurança
+app.enable("trust proxy");
 app.disable("x-powered-by");
 app.use(helmet());
 app.use(
