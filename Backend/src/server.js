@@ -7,41 +7,40 @@ import router from "./Routes/router.js";
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// 🌐 Domínios autorizados
+// =========================================================
+// 🌐 CORS — compatível com Render, Vercel e localhost
 const allowedOrigins = [
   "http://localhost:5173",
   "https://deskaura.vercel.app",
   "https://deskaura-frontend.onrender.com",
-  "https://deskaura.netlify.app"
+  "https://deskaura.netlify.app",
+  "https://deskaura-backend.onrender.com"
 ];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true); // permite Postman e chamadas internas
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      console.warn("🚫 Bloqueado por CORS:", origin);
+      return callback(new Error("NÃO AUTORIZADO POR CORS"));
+    },
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+  })
+);
+
+// ✅ Corrige preflight requests (CORS OPTIONS)
+app.options("*", cors());
 
 // =========================================================
 // 1️⃣ Body parser
 app.use(express.json());
 
 // =========================================================
-// 2️⃣ CORS 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Permite requisições sem 'origin' (tipo Postman, servidor interno etc.)
-      if (!origin) return callback(null, true);
-
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      } else {
-        console.warn("🚫 Bloqueado por CORS:", origin);
-        return callback(new Error("NÃO AUTORIZADO POR CORS"));
-      }
-    },
-    credentials: true,
-  })
-);
-
-// =========================================================
-// 3️⃣ Segurança
+// 2️⃣ Segurança com Helmet
 app.disable("x-powered-by");
-
 app.use(helmet());
 app.use(
   helmet.contentSecurityPolicy({
@@ -55,36 +54,36 @@ app.use(
 );
 app.use(
   helmet.hsts({
-    maxAge: 31536000,
+    maxAge: 31536000, // 1 ano
     includeSubDomains: true,
     preload: true,
   })
 );
 
 // =========================================================
-// 4️⃣ Rate limiter
-app.set("trust proxy", 1); // Necessário para proxies (Render, Vercel etc.)
+// 3️⃣ Rate limiter — limita requisições no /login
+app.set("trust proxy", 1); // necessário pro Render, Vercel etc.
 
 const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
+  windowMs: 15 * 60 * 1000, // 15 min
   max: 100,
   message: "Muitas requisições, tente novamente mais tarde.",
 });
 app.use("/login", loginLimiter);
 
 // =========================================================
-// 5️⃣ Logging
+// 4️⃣ Logging (pra debug)
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
   next();
 });
 
 // =========================================================
-// 6️⃣ Rotas principais
+// 5️⃣ Rotas principais
 app.use(router);
 
 // =========================================================
-// 7️⃣ Rotas auxiliares
+// 6️⃣ Rotas auxiliares e administrativas
 app.get("/admin/usuarios", async (req, res) => {
   try {
     const { PrismaClient } = await import("@prisma/client");
@@ -105,20 +104,25 @@ app.get("/admin/usuarios", async (req, res) => {
       })),
     });
   } catch (error) {
+    console.error("Erro ao buscar usuários:", error);
     res.status(500).json({ error: error.message });
   }
 });
 
+// =========================================================
+// 7️⃣ Health check (Render usa pra saber se o app tá no ar)
 app.get("/health", (req, res) => {
-  res.json({ status: "OK", message: "Backend funcionando" });
-});
-
-app.get("/", (req, res) => {
-  res.json({ message: "DeskAura Backend está online!" });
+  res.json({ status: "OK", message: "Backend funcionando ✅" });
 });
 
 // =========================================================
-// 🚀 Inicialização
+// 8️⃣ Rota base
+app.get("/", (req, res) => {
+  res.json({ message: "DeskAura Backend está online 🚀" });
+});
+
+// =========================================================
+// 🚀 Inicialização do servidor
 app.listen(PORT, () => {
   console.log(`🚀 Servidor rodando na porta ${PORT}`);
 });
