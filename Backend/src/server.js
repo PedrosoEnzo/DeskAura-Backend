@@ -6,7 +6,14 @@ import router from "./Routes/router.js";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const allowedOrigins = ["http://localhost:5173"];
+
+// 🌐 Domínios autorizados
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://deskaura.vercel.app",
+  "https://deskaura-frontend.onrender.com",
+  "https://deskaura.netlify.app"
+];
 
 // =========================================================
 // 1️⃣ Body parser
@@ -17,9 +24,15 @@ app.use(express.json());
 app.use(
   cors({
     origin: (origin, callback) => {
+      // Permite requisições sem 'origin' (tipo Postman, servidor interno etc.)
       if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) return callback(null, true);
-      return callback(new Error("NÃO AUTORIZADO POR CORS"));
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      } else {
+        console.warn("🚫 Bloqueado por CORS:", origin);
+        return callback(new Error("NÃO AUTORIZADO POR CORS"));
+      }
     },
     credentials: true,
   })
@@ -27,8 +40,8 @@ app.use(
 
 // =========================================================
 // 3️⃣ Segurança
-
 app.disable("x-powered-by");
+
 app.use(helmet());
 app.use(
   helmet.contentSecurityPolicy({
@@ -48,10 +61,9 @@ app.use(
   })
 );
 
-
 // =========================================================
 // 4️⃣ Rate limiter
-app.set("trust proxy", 1); // 🔒 Necessário para proxies (Render, Heroku etc.)
+app.set("trust proxy", 1); // Necessário para proxies (Render, Vercel etc.)
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -59,7 +71,6 @@ const loginLimiter = rateLimit({
   message: "Muitas requisições, tente novamente mais tarde.",
 });
 app.use("/login", loginLimiter);
-
 
 // =========================================================
 // 5️⃣ Logging
@@ -69,7 +80,7 @@ app.use((req, res, next) => {
 });
 
 // =========================================================
-// 6️⃣ Rotas (por último)
+// 6️⃣ Rotas principais
 app.use(router);
 
 // =========================================================
@@ -106,6 +117,8 @@ app.get("/", (req, res) => {
   res.json({ message: "DeskAura Backend está online!" });
 });
 
+// =========================================================
+// 🚀 Inicialização
 app.listen(PORT, () => {
   console.log(`🚀 Servidor rodando na porta ${PORT}`);
 });
