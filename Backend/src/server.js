@@ -14,13 +14,13 @@ const allowedOrigins = [
   "https://deskaura.vercel.app",
   "https://deskaura-frontend.onrender.com",
   "https://deskaura.netlify.app",
-  "https://deskaura-backend.onrender.com"
+  "https://deskaura-backend.onrender.com",
 ];
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin) return callback(null, true); // permite Postman e chamadas internas
+      if (!origin) return callback(null, true);
       if (allowedOrigins.includes(origin)) return callback(null, true);
       console.warn("🚫 Bloqueado por CORS:", origin);
       return callback(new Error("NÃO AUTORIZADO POR CORS"));
@@ -31,8 +31,16 @@ app.use(
   })
 );
 
-// ✅ Corrige preflight requests (CORS OPTIONS)
-app.options("*", cors());
+// ✅ Corrige preflight requests no Express 5
+app.use((req, res, next) => {
+  if (req.method === "OPTIONS") {
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.setHeader("Access-Control-Allow-Origin", req.headers.origin || "*");
+    return res.sendStatus(204);
+  }
+  next();
+});
 
 // =========================================================
 // 1️⃣ Body parser
@@ -62,10 +70,10 @@ app.use(
 
 // =========================================================
 // 3️⃣ Rate limiter — limita requisições no /login
-app.set("trust proxy", 1); // necessário pro Render, Vercel etc.
+app.set("trust proxy", 1);
 
 const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 min
+  windowMs: 15 * 60 * 1000,
   max: 100,
   message: "Muitas requisições, tente novamente mais tarde.",
 });
@@ -83,7 +91,7 @@ app.use((req, res, next) => {
 app.use(router);
 
 // =========================================================
-// 6️⃣ Rotas auxiliares e administrativas
+// 6️⃣ Rota administrativa — listar usuários
 app.get("/admin/usuarios", async (req, res) => {
   try {
     const { PrismaClient } = await import("@prisma/client");
