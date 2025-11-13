@@ -37,8 +37,10 @@ export const cadastrarUsuario = async (req, res) => {
     const token = generateToken(user.id_usuario);
     res.status(201).json({ user, token });
   } catch (error) {
-    res.status(500).json({ error: "Erro ao cadastrar usuário" });
-  }
+  console.error("Erro ao cadastrar:", error);
+  res.status(500).json({ error: "Erro ao cadastrar usuário", details: error.message });
+}
+
 };
 
 // Login
