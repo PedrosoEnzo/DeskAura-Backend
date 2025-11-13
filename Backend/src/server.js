@@ -14,7 +14,6 @@ const allowedOrigins = [
   "https://deskaura.vercel.app",
   "https://deskaura-frontend.onrender.com",
   "https://deskaura.netlify.app",
-  "https://deskaura-backend.onrender.com",
 ];
 
 app.use(
@@ -31,16 +30,8 @@ app.use(
   })
 );
 
-// ✅ Corrige preflight requests no Express 5
-app.use((req, res, next) => {
-  if (req.method === "OPTIONS") {
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-    res.setHeader("Access-Control-Allow-Origin", req.headers.origin || "*");
-    return res.sendStatus(204);
-  }
-  next();
-});
+// ✅ Corrige preflight requests
+app.options("*", cors());
 
 // =========================================================
 // 1️⃣ Body parser
@@ -50,28 +41,10 @@ app.use(express.json());
 // 2️⃣ Segurança com Helmet
 app.disable("x-powered-by");
 app.use(helmet());
-app.use(
-  helmet.contentSecurityPolicy({
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'"],
-      objectSrc: ["'none'"],
-      upgradeInsecureRequests: [],
-    },
-  })
-);
-app.use(
-  helmet.hsts({
-    maxAge: 31536000, // 1 ano
-    includeSubDomains: true,
-    preload: true,
-  })
-);
 
 // =========================================================
 // 3️⃣ Rate limiter — limita requisições no /login
 app.set("trust proxy", 1);
-
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
@@ -80,7 +53,7 @@ const loginLimiter = rateLimit({
 app.use("/login", loginLimiter);
 
 // =========================================================
-// 4️⃣ Logging (pra debug)
+// 4️⃣ Logging
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
   next();
@@ -88,49 +61,16 @@ app.use((req, res, next) => {
 
 // =========================================================
 // 5️⃣ Rotas principais
-app.use(router);
+app.use("/api", router);
 
 // =========================================================
-// 6️⃣ Rota administrativa — listar usuários
-app.get("/admin/usuarios", async (req, res) => {
-  try {
-    const { PrismaClient } = await import("@prisma/client");
-    const prisma = new PrismaClient();
-
-    const usuarios = await prisma.user.findMany({
-      select: { id_usuario: true, nome: true, email: true, ultimo_login: true },
-      orderBy: { id_usuario: "desc" },
-    });
-
-    res.json({
-      total: usuarios.length,
-      usuarios: usuarios.map((u) => ({
-        ...u,
-        ultimo_login: u.ultimo_login
-          ? new Date(u.ultimo_login).toLocaleString("pt-BR")
-          : "Nunca",
-      })),
-    });
-  } catch (error) {
-    console.error("Erro ao buscar usuários:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// =========================================================
-// 7️⃣ Health check (Render usa pra saber se o app tá no ar)
+// 6️⃣ Health check
 app.get("/health", (req, res) => {
   res.json({ status: "OK", message: "Backend funcionando ✅" });
 });
 
 // =========================================================
-// 8️⃣ Rota base
-app.get("/", (req, res) => {
-  res.json({ message: "DeskAura Backend está online 🚀" });
-});
-
-// =========================================================
-// 🚀 Inicialização do servidor
+// 7️⃣ Inicialização
 app.listen(PORT, () => {
   console.log(`🚀 Servidor rodando na porta ${PORT}`);
 });
