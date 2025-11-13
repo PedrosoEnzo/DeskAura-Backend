@@ -16,6 +16,39 @@ const allowedOrigins = [
   "https://deskaura.netlify.app",
 ];
 
+
+
+// Rota para atualizar senha
+router.put("/api/atualizar-senha", autenticarToken, async (req, res) => {
+  try {
+    const { senhaAtual, novaSenha } = req.body;
+    const userId = req.user.id_usuario; // vem do token JWT
+
+    // Busca usuário
+    const user = await prisma.user.findUnique({ where: { id_usuario: userId } });
+    if (!user) return res.status(404).json({ error: "Usuário não encontrado" });
+
+    // Verifica senha atual
+    const senhaValida = await bcrypt.compare(senhaAtual, user.senha_hash);
+    if (!senhaValida)
+      return res.status(401).json({ error: "Senha atual incorreta" });
+
+    // Atualiza senha
+    const novaSenhaHash = await bcrypt.hash(novaSenha, 10);
+    await prisma.user.update({
+      where: { id_usuario: userId },
+      data: { senha_hash: novaSenhaHash },
+    });
+
+    res.json({ message: "Senha atualizada com sucesso!" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Erro ao atualizar senha" });
+  }
+});
+
+
+
 app.use(
   cors({
     origin: (origin, callback) => {

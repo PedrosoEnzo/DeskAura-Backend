@@ -18,7 +18,7 @@ router.post("/cadastro", cadastrarUsuario);
 router.post("/login", loginUsuario);
 router.get("/perfil", perfilUsuario);
 router.put("/senha", atualizarSenha);
-
+router.put("/atualizar-senha", atualizarSenha);
 // Simulações
 router.post("/simulacoes", criarSimulacao);
 router.get("/simulacoes", listarSimulacoes);
