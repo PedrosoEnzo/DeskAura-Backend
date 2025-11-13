@@ -8,11 +8,24 @@ generator client {
 }
 
 model User {
-  id_usuario   Int      @id @default(autoincrement())
+  id_usuario   Int           @id @default(autoincrement())
   nome         String
   email        String   @unique
   senha_hash   String
   ultimo_login DateTime?
 
+  simulacoes   Simulacao[]
   @@map("users")
+}
+
+model Simulacao {
+  id           Int      @id @default(autoincrement())
+  cultura      String
+  solo         String
+  score        Int
+  data         DateTime @default(now())
+  usuarioId    Int
+  usuario      User     @relation(fields: [usuarioId], references: [id_usuario])
+
+  @@map("simulacoes")
 }
