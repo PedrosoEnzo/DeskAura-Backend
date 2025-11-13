@@ -30,8 +30,7 @@ app.use(
   })
 );
 
-// ✅ Corrige preflight requests
-app.options("/*", cors());
+
 
 // =========================================================
 // 1️⃣ Body parser
