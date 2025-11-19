@@ -1,6 +1,8 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { enviarEmailRecuperacao } from "../services/emailService.js";
+
 
 const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || "marcos_aurelo_secret";
