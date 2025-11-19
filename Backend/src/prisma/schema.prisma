@@ -29,3 +29,11 @@ model Simulacao {
 
   @@map("simulacoes")
 }
+
+model RecuperacaoSenha {
+  id            Int      @id @default(autoincrement())
+  email         String
+  codigo        String
+  expiracao     DateTime
+  usado         Boolean  @default(false)
+}

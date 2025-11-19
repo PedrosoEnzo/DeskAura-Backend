@@ -13,6 +13,16 @@ import {
 
 const router = express.Router();
 
+import { 
+  enviarCodigoRecuperacao,
+  validarCodigo,
+  redefinirSenha
+} from "../Controllers/recoveryController.js";
+
+router.post("/esqueci-senha", enviarCodigoRecuperacao);
+router.post("/validar-codigo", validarCodigo);
+router.put("/redefinir-senha", redefinirSenha);
+
 // Usuário
 router.post("/cadastro", cadastrarUsuario);
 router.post("/login", loginUsuario);
