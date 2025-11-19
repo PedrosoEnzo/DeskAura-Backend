@@ -16,7 +16,7 @@ client.setApiKey(
 export async function enviarEmailRecuperacao(email, codigo) {
   try {
     const sender = {
-      email: "noreply@aurasystem.com", // precisa estar validado no Brevo
+      email: "enzopedroso77@gmail.com", // precisa estar validado no Brevo
       name: "AURA System",
     };
 
