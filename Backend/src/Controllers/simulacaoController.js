@@ -1,56 +1,64 @@
+// src/Controllers/simulacaoController.js
 import { PrismaClient } from "@prisma/client";
 import { authMiddleware } from "./userController.js";
 
 const prisma = new PrismaClient();
 
-// Helpers
-function faixa(valor, idealMin, idealMax) {
-  if (valor === undefined || valor === null || Number.isNaN(Number(valor))) return 60;
-  valor = Number(valor);
-  if (valor < idealMin) return 60 * (valor / idealMin);
-  if (valor > idealMax) return 60 * (idealMax / valor);
-  return 100;
+// Função para gerar recomendações simples
+function gerarRecomendacoes(cultura, solo, adubo, regiao) {
+  return [
+    `Plantio recomendado de ${cultura} no solo ${solo} usando ${adubo}.`,
+    `Região considerada: ${regiao}.`
+  ];
 }
 
-function gerarRecomendacoes(data) {
-  const rec = [];
-  if (data.ph < 5.5) rec.push("Solo ácido — considerar calagem.");
-  if (data.nitrogenio < 50) rec.push("Nitrogênio baixo — aplicar adubação N.");
-  if (data.fosforo < 30) rec.push("Fósforo insuficiente — usar MAP ou superfosfato.");
-  if (data.potassio < 40) rec.push("Potássio baixo — considerar KCl.");
-  if (data.risco_pragas > 60) rec.push("Alto risco de pragas — iniciar monitoramento.");
-  if (data.chuva_mm < 80) rec.push("Baixa chuva — risco de estresse hídrico.");
-  if (data.temperatura > 33) rec.push("Temperatura elevada — risco para floração.");
-  return rec;
+// Função para calcular score baseado nos inputs
+function calcularScore(cultura, solo, adubo, regiao) {
+  const scores = {
+    solo: { Latossolo: 25, Argissolo: 25, Neossolo: 20, Nitossolo: 25, Gleissolo: 20, Cambissolo: 15 },
+    adubo: { Organico: 25, Mineral: 20 },
+    regiao: { Norte: 20, Nordeste: 15, CentroOeste: 25, Sudeste: 20, Sul: 20 },
+    cultura: { Milho: 10, Feijao: 15, Mandioca: 20, Hortaliças: 10, Frutas: 5, Arroz: 10, Café: 5 },
+  };
+
+  const score =
+    (scores.solo[solo] || 0) +
+    (scores.adubo[adubo] || 0) +
+    (scores.regiao[regiao] || 0) +
+    (scores.cultura[cultura] || 0);
+
+  return score;
 }
 
+// Função para estimar produtividade com base no score
 function produtividadeBase(cultura, score) {
   const ref = {
-    milho: { baixa: 70, alta: 150 },
-    soja: { baixa: 30, alta: 60 },
-    trigo: { baixa: 25, alta: 55 },
-    feijao: { baixa: 12, alta: 30 },
-    mandioca: { baixa: 10, alta: 30 },
-    hortaliças: { baixa: 5, alta: 20 },
-    frutas: { baixa: 5, alta: 40 },
-    arroz: { baixa: 30, alta: 80 },
-    cafe: { baixa: 10, alta: 40 }
+    Milho: { baixa: 70, alta: 150 },
+    Feijao: { baixa: 12, alta: 30 },
+    Mandioca: { baixa: 10, alta: 30 },
+    Hortaliças: { baixa: 5, alta: 20 },
+    Frutas: { baixa: 5, alta: 40 },
+    Arroz: { baixa: 30, alta: 80 },
+    Café: { baixa: 10, alta: 40 },
   };
-  const c = ref[cultura.toLowerCase()] || ref["milho"];
+  const c = ref[cultura] || { baixa: 50, alta: 100 };
   return Math.round(c.baixa + (score / 100) * (c.alta - c.baixa));
 }
 
-// Criar
+// Criar simulação
 export const criarSimulacao = [
   authMiddleware,
   async (req, res) => {
     try {
       const { cultura, solo, adubo, regiao } = req.body;
 
-      // Score e produtividade simples (só pra manter lógica)
-      const scoreFinal = 100; // como exemplo fixo
-      const produtividade = 100; // pode ajustar ou usar referência por cultura
-      const recomendacoes = [`Plantio recomendado de ${cultura} no solo ${solo} usando ${adubo}.`];
+      if (!cultura || !solo || !adubo || !regiao) {
+        return res.status(400).json({ error: "Todos os campos (cultura, solo, adubo, regiao) são obrigatórios." });
+      }
+
+      const scoreFinal = calcularScore(cultura, solo, adubo, regiao);
+      const produtividade = produtividadeBase(cultura, scoreFinal);
+      const recomendacoes = gerarRecomendacoes(cultura, solo, adubo, regiao);
 
       const simulacao = await prisma.simulacao.create({
         data: {
@@ -73,8 +81,7 @@ export const criarSimulacao = [
   },
 ];
 
-
-// Listar
+// Listar simulações do usuário
 export const listarSimulacoes = [
   authMiddleware,
   async (req, res) => {
