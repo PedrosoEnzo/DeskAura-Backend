@@ -4,6 +4,12 @@ import { authMiddleware } from "./userController.js";
 
 const prisma = new PrismaClient();
 
+// Função para capitalizar strings
+function capitalize(str) {
+  if (!str) return "";
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+}
+
 // Função para gerar recomendações simples
 function gerarRecomendacoes(cultura, solo, adubo, regiao) {
   return [
@@ -50,22 +56,28 @@ export const criarSimulacao = [
   authMiddleware,
   async (req, res) => {
     try {
-      const { cultura, solo, adubo, regiao } = req.body;
+      let { cultura, solo, adubo, regiao } = req.body;
 
       if (!cultura || !solo || !adubo || !regiao) {
         return res.status(400).json({ error: "Todos os campos (cultura, solo, adubo, regiao) são obrigatórios." });
       }
 
-      const scoreFinal = calcularScore(cultura, solo, adubo, regiao);
-      const produtividade = produtividadeBase(cultura, scoreFinal);
-      const recomendacoes = gerarRecomendacoes(cultura, solo, adubo, regiao);
+      // Normaliza os valores para correspondência com os scores
+      const culturaCap = capitalize(cultura);
+      const soloCap = capitalize(solo);
+      const aduboCap = capitalize(adubo);
+      const regiaoCap = capitalize(regiao.replace("-", "")); // ex: "centro-oeste" -> "CentroOeste"
+
+      const scoreFinal = calcularScore(culturaCap, soloCap, aduboCap, regiaoCap);
+      const produtividade = produtividadeBase(culturaCap, scoreFinal);
+      const recomendacoes = gerarRecomendacoes(culturaCap, soloCap, aduboCap, regiaoCap);
 
       const simulacao = await prisma.simulacao.create({
         data: {
-          cultura,
-          solo,
-          adubo,
-          regiao,
+          cultura: culturaCap,
+          solo: soloCap,
+          adubo: aduboCap,
+          regiao: regiaoCap,
           score: scoreFinal,
           produtividade,
           recomendacoes: JSON.stringify(recomendacoes),
