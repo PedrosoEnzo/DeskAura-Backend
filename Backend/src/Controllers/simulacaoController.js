@@ -45,51 +45,24 @@ export const criarSimulacao = [
   authMiddleware,
   async (req, res) => {
     try {
-      const data = req.body;
+      const { cultura, solo, adubo, regiao } = req.body;
 
-      const aguaScore = faixa(data.chuva_mm, 80, 140);
-      const tempScore = faixa(data.temperatura, 20, 30);
-      const phScore = faixa(data.ph, 5.5, 6.5);
-
-      const nutrientesScore = (
-        faixa(data.nitrogenio, 50, 120) +
-        faixa(data.fosforo, 30, 60) +
-        faixa(data.potassio, 40, 90)
-      ) / 3;
-
-      const soloScore = (data.solo || "").toLowerCase() === "argiloso" ? 90 :
-                        (data.solo || "").toLowerCase() === "misto" ? 75 : 60;
-
-      const pragasScore = 100 - (Number(data.risco_pragas) || 0);
-
-      const scoreFinal = Math.round(
-        (aguaScore * 0.2) +
-        (tempScore * 0.2) +
-        (phScore * 0.15) +
-        (nutrientesScore * 0.25) +
-        (soloScore * 0.1) +
-        (pragasScore * 0.1)
-      );
-
-      const produtividade = produtividadeBase(String(data.cultura || "milho"), scoreFinal);
-      const recomendacoes = gerarRecomendacoes(data);
+      // Score e produtividade simples (só pra manter lógica)
+      const scoreFinal = 100; // como exemplo fixo
+      const produtividade = 100; // pode ajustar ou usar referência por cultura
+      const recomendacoes = [`Plantio recomendado de ${cultura} no solo ${solo} usando ${adubo}.`];
 
       const simulacao = await prisma.simulacao.create({
         data: {
-          cultura: data.cultura,
-          solo: data.solo,
-          chuva_mm: Number(data.chuva_mm),
-          temperatura: Number(data.temperatura),
-          ph: Number(data.ph),
-          nitrogenio: Number(data.nitrogenio),
-          fosforo: Number(data.fosforo),
-          potassio: Number(data.potassio),
-          risco_pragas: Number(data.risco_pragas),
+          cultura,
+          solo,
+          adubo,
+          regiao,
           score: scoreFinal,
           produtividade,
           recomendacoes: JSON.stringify(recomendacoes),
-          usuarioId: req.userId
-        }
+          usuarioId: req.userId,
+        },
       });
 
       res.status(201).json({ ...simulacao, recomendacoes });
@@ -99,6 +72,7 @@ export const criarSimulacao = [
     }
   },
 ];
+
 
 // Listar
 export const listarSimulacoes = [

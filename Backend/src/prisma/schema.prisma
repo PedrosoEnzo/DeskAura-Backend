@@ -19,27 +19,23 @@ model User {
 }
 
 model Simulacao {
-  id               Int      @id @default(autoincrement())
-  cultura          String
-  solo             String
-  chuva_mm         Int
-  temperatura      Float
-  ph               Float
-  nitrogenio       Int
-  fosforo          Int
-  potassio         Int
-  risco_pragas     Int
+  id         Int      @id @default(autoincrement())
+  cultura    String
+  solo       String
+  adubo      String
+  regiao     String
 
   score            Int
   produtividade    Int
   recomendacoes    String   // JSON.stringify()
   data             DateTime @default(now())
 
-  usuarioId        Int
-  usuario          User     @relation(fields: [usuarioId], references: [id_usuario])
+  usuarioId  Int
+  usuario    User     @relation(fields: [usuarioId], references: [id_usuario])
 
   @@map("simulacoes")
 }
+
 
 
 model RecuperacaoSenha {
