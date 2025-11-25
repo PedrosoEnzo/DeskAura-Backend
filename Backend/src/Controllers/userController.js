@@ -7,7 +7,7 @@ const JWT_SECRET = process.env.JWT_SECRET || "marcos_aurelo_secret";
 
 const generateToken = (userId) => jwt.sign({ id: userId }, JWT_SECRET, { expiresIn: "1d" });
 
-// Middleware de autenticação
+// Middleware exportado
 export const authMiddleware = (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ error: "Token não fornecido" });
@@ -17,7 +17,7 @@ export const authMiddleware = (req, res, next) => {
     const decoded = jwt.verify(token, JWT_SECRET);
     req.userId = decoded.id;
     next();
-  } catch {
+  } catch (err) {
     return res.status(401).json({ error: "Token inválido" });
   }
 };
@@ -30,17 +30,15 @@ export const cadastrarUsuario = async (req, res) => {
     if (existingUser) return res.status(400).json({ error: "Email já cadastrado" });
 
     const senha_hash = await bcrypt.hash(senha, 10);
-    const user = await prisma.user.create({
-      data: { nome, email, senha_hash },
-    });
+    const user = await prisma.user.create({ data: { nome, email, senha_hash } });
 
     const token = generateToken(user.id_usuario);
-    res.status(201).json({ user, token });
+    const { senha_hash: _, ...userWithout } = user;
+    res.status(201).json({ user: userWithout, token });
   } catch (error) {
-  console.error("Erro ao cadastrar:", error);
-  res.status(500).json({ error: "Erro ao cadastrar usuário", details: error.message });
-}
-
+    console.error("Erro ao cadastrar:", error);
+    res.status(500).json({ error: "Erro ao cadastrar usuário", details: error.message });
+  }
 };
 
 // Login
@@ -53,15 +51,13 @@ export const loginUsuario = async (req, res) => {
     const validPassword = await bcrypt.compare(senha, user.senha_hash);
     if (!validPassword) return res.status(401).json({ error: "Email ou senha inválidos" });
 
-    await prisma.user.update({
-      where: { id_usuario: user.id_usuario },
-      data: { ultimo_login: new Date() },
-    });
+    await prisma.user.update({ where: { id_usuario: user.id_usuario }, data: { ultimo_login: new Date() } });
 
     const token = generateToken(user.id_usuario);
     const { senha_hash, ...userData } = user;
     res.json({ user: userData, token });
-  } catch {
+  } catch (error) {
+    console.error("Erro login:", error);
     res.status(500).json({ error: "Erro interno no login" });
   }
 };
@@ -75,18 +71,17 @@ export const perfilUsuario = [
         where: { id_usuario: req.userId },
         include: { simulacoes: true },
       });
-
       if (!user) return res.status(404).json({ error: "Usuário não encontrado" });
-
       const { senha_hash, ...userData } = user;
       res.json(userData);
     } catch (error) {
+      console.error("Erro perfil:", error);
       res.status(500).json({ error: "Erro ao buscar perfil" });
     }
   },
 ];
 
-// Atualizar senha
+// Atualizar senha (perfil autenticado)
 export const atualizarSenha = [
   authMiddleware,
   async (req, res) => {
@@ -98,13 +93,11 @@ export const atualizarSenha = [
       if (!validPassword) return res.status(401).json({ error: "Senha atual incorreta" });
 
       const novaHash = await bcrypt.hash(novaSenha, 10);
-      await prisma.user.update({
-        where: { id_usuario: req.userId },
-        data: { senha_hash: novaHash },
-      });
+      await prisma.user.update({ where: { id_usuario: req.userId }, data: { senha_hash: novaHash } });
 
       res.json({ message: "Senha atualizada com sucesso" });
     } catch (error) {
+      console.error("Erro atualizar senha:", error);
       res.status(500).json({ error: "Erro ao atualizar senha" });
     }
   },

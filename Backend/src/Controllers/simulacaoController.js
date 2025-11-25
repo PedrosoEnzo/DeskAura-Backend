@@ -3,8 +3,10 @@ import { authMiddleware } from "./userController.js";
 
 const prisma = new PrismaClient();
 
-// ======== Funções auxiliares ========
+// Helpers
 function faixa(valor, idealMin, idealMax) {
+  if (valor === undefined || valor === null || Number.isNaN(Number(valor))) return 60;
+  valor = Number(valor);
   if (valor < idealMin) return 60 * (valor / idealMin);
   if (valor > idealMax) return 60 * (idealMax / valor);
   return 100;
@@ -12,7 +14,6 @@ function faixa(valor, idealMin, idealMax) {
 
 function gerarRecomendacoes(data) {
   const rec = [];
-
   if (data.ph < 5.5) rec.push("Solo ácido — considerar calagem.");
   if (data.nitrogenio < 50) rec.push("Nitrogênio baixo — aplicar adubação N.");
   if (data.fosforo < 30) rec.push("Fósforo insuficiente — usar MAP ou superfosfato.");
@@ -20,7 +21,6 @@ function gerarRecomendacoes(data) {
   if (data.risco_pragas > 60) rec.push("Alto risco de pragas — iniciar monitoramento.");
   if (data.chuva_mm < 80) rec.push("Baixa chuva — risco de estresse hídrico.");
   if (data.temperatura > 33) rec.push("Temperatura elevada — risco para floração.");
-
   return rec;
 }
 
@@ -29,34 +29,38 @@ function produtividadeBase(cultura, score) {
     milho: { baixa: 70, alta: 150 },
     soja: { baixa: 30, alta: 60 },
     trigo: { baixa: 25, alta: 55 },
-    feijao: { baixa: 12, alta: 30 }
+    feijao: { baixa: 12, alta: 30 },
+    mandioca: { baixa: 10, alta: 30 },
+    hortaliças: { baixa: 5, alta: 20 },
+    frutas: { baixa: 5, alta: 40 },
+    arroz: { baixa: 30, alta: 80 },
+    cafe: { baixa: 10, alta: 40 }
   };
-  const c = ref[cultura] || ref["milho"];
+  const c = ref[cultura.toLowerCase()] || ref["milho"];
   return Math.round(c.baixa + (score / 100) * (c.alta - c.baixa));
 }
 
-// ======== Criar simulação ========
+// Criar
 export const criarSimulacao = [
   authMiddleware,
   async (req, res) => {
     try {
       const data = req.body;
 
-      // ---- Cálculos ----
       const aguaScore = faixa(data.chuva_mm, 80, 140);
       const tempScore = faixa(data.temperatura, 20, 30);
       const phScore = faixa(data.ph, 5.5, 6.5);
 
-      const nutrientesScore =
-        (faixa(data.nitrogenio, 50, 120) +
-         faixa(data.fosforo, 30, 60) +
-         faixa(data.potassio, 40, 90)) / 3;
+      const nutrientesScore = (
+        faixa(data.nitrogenio, 50, 120) +
+        faixa(data.fosforo, 30, 60) +
+        faixa(data.potassio, 40, 90)
+      ) / 3;
 
-      const soloScore =
-        data.solo === "argiloso" ? 90 :
-        data.solo === "misto"    ? 75 : 60;
+      const soloScore = (data.solo || "").toLowerCase() === "argiloso" ? 90 :
+                        (data.solo || "").toLowerCase() === "misto" ? 75 : 60;
 
-      const pragasScore = 100 - data.risco_pragas;
+      const pragasScore = 100 - (Number(data.risco_pragas) || 0);
 
       const scoreFinal = Math.round(
         (aguaScore * 0.2) +
@@ -67,31 +71,36 @@ export const criarSimulacao = [
         (pragasScore * 0.1)
       );
 
-      const produtividade = produtividadeBase(data.cultura, scoreFinal);
+      const produtividade = produtividadeBase(String(data.cultura || "milho"), scoreFinal);
       const recomendacoes = gerarRecomendacoes(data);
 
-      // ---- Salvar ----
       const simulacao = await prisma.simulacao.create({
         data: {
-          ...data,
+          cultura: data.cultura,
+          solo: data.solo,
+          chuva_mm: Number(data.chuva_mm),
+          temperatura: Number(data.temperatura),
+          ph: Number(data.ph),
+          nitrogenio: Number(data.nitrogenio),
+          fosforo: Number(data.fosforo),
+          potassio: Number(data.potassio),
+          risco_pragas: Number(data.risco_pragas),
           score: scoreFinal,
           produtividade,
           recomendacoes: JSON.stringify(recomendacoes),
-          usuarioId: req.userId,
+          usuarioId: req.userId
         }
       });
 
-      res.status(201).json(simulacao);
-
+      res.status(201).json({ ...simulacao, recomendacoes });
     } catch (error) {
-      console.error(error);
+      console.error("Erro criar simulacao:", error);
       res.status(500).json({ error: "Erro ao criar simulação" });
     }
   },
 ];
 
-
-// ======== Listar ========
+// Listar
 export const listarSimulacoes = [
   authMiddleware,
   async (req, res) => {
@@ -100,15 +109,10 @@ export const listarSimulacoes = [
         where: { usuarioId: req.userId },
         orderBy: { data: "desc" },
       });
-
-      res.json(
-        simulacoes.map(s => ({
-          ...s,
-          recomendacoes: JSON.parse(s.recomendacoes)
-        }))
-      );
-
+      const parsed = simulacoes.map(s => ({ ...s, recomendacoes: JSON.parse(s.recomendacoes) }));
+      res.json(parsed);
     } catch (error) {
+      console.error("Erro listar simulacoes:", error);
       res.status(500).json({ error: "Erro ao buscar simulações" });
     }
   },
